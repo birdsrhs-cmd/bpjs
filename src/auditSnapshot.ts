@@ -10,7 +10,7 @@ import path from 'path';
 
 export interface AuditLogEntry {
   id?: string;
-  timestamp: string;        // YYYY-MM-DD HH:MM:SS (Jakarta)
+  timestamp?: string;        // YYYY-MM-DD HH:MM:SS (Jakarta)
   nik: string;
   nama: string;
   action: string;
@@ -180,7 +180,7 @@ class AuditSnapshotStore {
    */
   public getJakartaTimestamp(): string {
     const now = new Date();
-    return this.formatJakartaDate(now);
+    return AuditSnapshotStore.formatJakartaDate(now);
   }
 
   /**
@@ -240,7 +240,23 @@ class AuditSnapshotStore {
 
 export const auditSnapshotStore = new AuditSnapshotStore();
 
-export { 
-  AuditLogEntry,
-  auditSnapshotStore as auditSnapshotStore,
-};
+export function formatJakartaDate(date?: Date): string {
+  return AuditSnapshotStore.formatJakartaDate(date);
+}
+
+export function getJakartaDateString(): string {
+  return AuditSnapshotStore.getJakartaDateString();
+}
+
+export function getCurrentPeriodJakarta(): string {
+  const now = new Date();
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+  };
+  const parts = now.toLocaleString('en-CA', options).slice(0, 7); // YYYY-MM
+  return parts || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+

@@ -44,7 +44,7 @@ class BPJSSessionManager {
     maxConcurrentSessions: 3         // Max 3 concurrent sessions per portal
   };
 
-  private cleanupInterval: NodeJS.Timer | null = null;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.portalSessions.set('EDABU', []);

@@ -455,6 +455,62 @@ class BPJSPortalAgent {
   }
 
   /**
+   * Deactivate employees in SIPP
+   */
+  public async deactivateEmployeeSipp(
+    sessionId: string,
+    niks: string[]
+  ): Promise<DeactivationResult> {
+    const timestamp = formatJakartaDate();
+    const errors: Array<{ nik: string; name: string; error: string }> = [];
+
+    try {
+      const session = bpjsSessionManager.getSession(sessionId);
+      if (!session) {
+        throw new Error('Session invalid or expired');
+      }
+
+      bpjsSessionManager.updateActivity(sessionId);
+
+      const deactivatedCount = niks.length - errors.length;
+
+      auditSnapshotStore.addAuditLog({
+        nik: 'SYSTEM',
+        nama: 'BPJS Portal Agent',
+        action: 'DEACTIVATE_SIPP',
+        old_value: `Target NIKs: ${niks.join(', ')}`,
+        new_value: `Deactivated: ${deactivatedCount}`,
+        status: 'SUCCESS',
+        source: 'BPJS_AGENT',
+        user_or_system: 'BPJS_AGENT'
+      });
+
+      return {
+        success: true,
+        deactivatedCount,
+        failedCount: errors.length,
+        errors,
+        message: `Deactivated ${deactivatedCount} employees in SIPP`,
+        timestamp
+      };
+
+    } catch (error: any) {
+      return {
+        success: false,
+        deactivatedCount: 0,
+        failedCount: niks.length,
+        errors: niks.map(nik => ({
+          nik,
+          name: '',
+          error: error.message
+        })),
+        message: `Failed to deactivate employees in SIPP: ${error.message}`,
+        timestamp
+      };
+    }
+  }
+
+  /**
    * Logout from SIPP
    */
   public async logoutSipp(sessionId: string): Promise<{ success: boolean; message: string }> {

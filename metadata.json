@@ -1,0 +1,8 @@
+{
+  "name": "BPJS Autonomous Agent Portal",
+  "description": "Autonomous data synchronization, credential vault, session monitor, and compliance manager for BPJS Kesehatan (EDABU) and BPJS Ketenagakerjaan (SIPP Online).",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

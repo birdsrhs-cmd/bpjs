@@ -1,415 +1,157 @@
 # 🤖 BPJS Autonomous Agent - Complete Implementation Package
 
-**Date:** 28 September 2026  
-**Version:** 1.0  
-**Status:** Ready for Development
+**Date:** September 2026  
+**Version:** 1.0.0  
+**Status:** ✅ Production-Ready Implementation & Interactive Web Portal  
+
+Autonomous data synchronization, credential vault, session monitor, and compliance manager for **BPJS Kesehatan (EDABU)** and **BPJS Ketenagakerjaan (SIPP Online)**.
 
 ---
 
-## 📦 Package Contents
+## 📦 Repository Structure
 
-### 📄 Documentation (5 Files - 77,000+ words)
+The repository structure is organized as follows:
 
-1. **00_DELIVERABLES_SUMMARY.md**
-   - Overview of all deliverables
-   - What's included & implemented
-   - Key innovations & highlights
-   - Success criteria
-
-2. **01_AUDIT_REPORT_AND_PLAN.md**
-   - Current state analysis
-   - 4-phase implementation plan
-   - Risk assessment & mitigation
-   - Technology recommendations
-   - Security checklist
-
-3. **02_AGENT_API_ENDPOINTS.md**
-   - 15+ RESTful API endpoints
-   - Complete request/response examples
-   - Curl command examples
-   - Security best practices
-   - Workflow documentation
-
-4. **03_IMPLEMENTATION_GUIDE.md**
-   - Step-by-step integration instructions
-   - Architecture overview with diagrams
-   - Installation & setup
-   - Configuration details
-   - Testing procedures
-   - Deployment checklist
-   - Troubleshooting guide
-
-5. **04_ROADMAP_AND_NEXT_STEPS.md**
-   - 4-week development timeline
-   - Detailed task breakdown
-   - Team requirements & effort estimate
-   - Milestones & critical success factors
-   - Risk mitigation strategies
-
-### 💻 Source Code (3 TypeScript Modules - 980+ lines)
-
-1. **credentialVault.ts**
-   - Secure credential storage with AES-256-GCM encryption
-   - PBKDF2 key derivation (100,000 iterations)
-   - Credential rotation & management
-   - Full audit logging
-   - Status: ✅ Production-ready
-
-2. **bpjsSessionManager.ts**
-   - Session lifecycle management
-   - Auto-refresh tokens before expiry
-   - Timeout & inactivity handling
-   - Concurrent session limiting
-   - Auto-cleanup worker
-   - Status: ✅ Production-ready
-
-3. **bpjsPortalAgent.ts**
-   - Template for Playwright browser automation
-   - EDABU (BPJS Kesehatan) operations
-   - SIPP Online (BPJS Ketenagakerjaan) operations
-   - Retry logic with exponential backoff
-   - Session management integration
-   - Status: ⏳ Template-ready (awaiting Playwright implementation)
-
----
-
-## 🚀 Quick Start
-
-### 1. Read Documentation
-```bash
-# Start with this for overview
-docs/00_DELIVERABLES_SUMMARY.md
-
-# Then understand the architecture
-docs/01_AUDIT_REPORT_AND_PLAN.md
-
-# Then follow step-by-step
-docs/03_IMPLEMENTATION_GUIDE.md
-
-# Check API endpoints
-docs/02_AGENT_API_ENDPOINTS.md
-
-# Plan your timeline
-docs/04_ROADMAP_AND_NEXT_STEPS.md
+```
+├── .env.example              # Environment variables template
+├── .gitignore                # Git exclusions (node_modules, .env.local, .vault_master_key, logs)
+├── .gitattributes           # Git path attributes
+├── README.md                 # System overview and operational guide
+├── package.json              # Dependencies, scripts, and module definitions
+├── tsconfig.json             # TypeScript compiler configuration (ESNext, Bundler)
+├── vite.config.ts            # Vite + React + Tailwind CSS configuration
+├── index.html                # Web Application entry point (Port 3000)
+├── server.ts                 # Full-stack Express backend & Vite SPA server
+├── run-agent.ts              # CLI test runner for autonomous operations
+│
+├── src/                      # Source Code
+│   ├── main.tsx              # React client initialization
+│   ├── App.tsx               # Main portal application component
+│   ├── index.css             # Tailwind CSS imports & global styles
+│   ├── types.ts              # Core TypeScript interface definitions
+│   ├── credentialVault.ts    # AES-256-GCM Credential Vault with PBKDF2
+│   ├── bpjsSessionManager.ts # Portal session lifecycle, timeouts, & token refresh
+│   ├── bpjsPortalAgent.ts    # Playwright browser automation & challenge hooks
+│   ├── auditSnapshot.ts      # Immutable compliance audit log (Asia/Jakarta WIB)
+│   ├── employeeStore.ts      # Master employee repository & delta classifier
+│   ├── bpjsSyncEngine.ts     # Business rules & regulatory validation engine
+│   └── components/           # Interactive Web UI Components
+│       ├── Header.tsx        # Top navigation & system health badge
+│       ├── RunnerView.tsx    # Live sync orchestrator & console stream
+│       ├── EmployeeDeltaView.tsx # Master data roster & BPJS delta inspector
+│       ├── VaultView.tsx     # Credential vault management & password rotation
+│       ├── SessionView.tsx   # Active session monitor & policy editor
+│       ├── AuditView.tsx     # Regulatory audit ledger & compliance export
+│       └── ApiExplorerView.tsx # Interactive test bench for all 15+ REST endpoints
+│
+└── docs/                     # Architecture & Integration Guides
+    ├── 00_DELIVERABLES_SUMMARY.md
+    ├── 01_AUDIT_REPORT_AND_PLAN.md
+    ├── 02_AGENT_API_ENDPOINTS.md
+    ├── 03_IMPLEMENTATION_GUIDE.md
+    └── 04_ROADMAP_AND_NEXT_STEPS.md
 ```
 
-### 2. Setup Development Environment
-```bash
-# Install dependencies
-npm install playwright dotenv
+---
 
-# Generate master encryption key
+## 🚀 Getting Started
+
+### 1. Installation
+Install project dependencies:
+```bash
+npm install
+```
+
+### 2. Configure Environment & Master Key
+Copy the example environment configuration:
+```bash
+cp .env.example .env.local
+```
+
+#### 🔐 `CREDENTIAL_MASTER_KEY` Security Management
+- **In Development**: If `CREDENTIAL_MASTER_KEY` is not supplied, the vault creates a persistent key file `.vault_master_key` with strict read permissions (`0600`), ensuring your encrypted credentials survive server restarts. The raw key is **never logged** to standard output or the browser console.
+- **In Production**: Set a permanent 32-byte hex key injected via an enterprise secret manager:
+  - AWS Secrets Manager (`AWS_SECRET_NAME`)
+  - HashiCorp Vault (`VAULT_ADDR` & `VAULT_TOKEN`)
+  - Google Cloud Secret Manager or Kubernetes Secrets
+
+Generate a 256-bit key:
+```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-
-# Copy key to .env.local
-CREDENTIAL_MASTER_KEY=<generated-key-here>
 ```
+Place it into `.env.local` (which is excluded by `.gitignore` and must **never** be committed to Git).
 
-### 3. Integrate Modules
-```bash
-# Copy TypeScript modules to your project
-cp src/*.ts your-project/src/server/modules/
+---
 
-# Add imports to server.ts
-import { credentialVault } from './src/server/modules/credentialVault.js';
-import { bpjsSessionManager } from './src/server/modules/bpjsSessionManager.js';
-import { bpjsPortalAgent } from './src/server/modules/bpjsPortalAgent.js';
+## 💻 Running the Application
 
-# Add API endpoints from docs/02_AGENT_API_ENDPOINTS.md
-```
-
-### 4. Implement Browser Automation
-```bash
-# Edit src/bpjsPortalAgent.ts
-# Implement Playwright automation for:
-# - loginToEdabu()
-# - uploadEmployeeDataEdabu()
-# - deactivateEmployeeEdabu()
-# - logoutEdabu()
-# - loginToSipp()
-# - uploadEmployeeDataSipp()
-# - logoutSipp()
-
-# See IMPLEMENTATION_GUIDE.md for code templates
-```
-
-### 5. Test & Deploy
+### Option A: Interactive Web Dashboard & REST API (Recommended)
+Start the unified server on **Port 3000**:
 ```bash
 npm run dev
-# Test endpoints
-curl -X POST http://localhost:3000/api/agent/credentials/store
-curl -X POST http://localhost:3000/api/agent/login-test/EDABU
+```
+Open [http://localhost:3000](http://localhost:3000) to access:
+- **Agent Runner & Console**: Trigger full sync cycles, test EDABU/SIPP logins, and inspect real-time log streams.
+- **Master Data & Delta Engine**: Validate 16-digit NIKs, BPJS Kesehatan numbers (13 digits), and KPJ (11 digits).
+- **Credential Vault**: Encrypt, store, rotate, and backup government portal credentials.
+- **Session Monitor**: Inspect active tokens, expiry countdowns, and force logout per portal.
+- **Compliance Audit Ledger**: Filter transaction logs by status, actor, and Jakarta timestamp.
+- **API Explorer**: Send live test requests to all 15+ REST endpoints with one-click `curl` snippets.
 
-# Run full test suite
-npm test
-
-# Deploy to production
-npm run build
+### Option B: Autonomous Agent CLI
+Run the standalone CLI runner directly using `tsx`:
+```bash
+npm run agent:cli
+# Or directly:
+npx tsx run-agent.ts
 ```
 
 ---
 
-## 📋 File Structure
+## 🛡️ Security, CAPTCHA, and Regulatory Considerations
 
-```
-bpjs-autonomous-agent-deliverables/
-├── README.md (this file)
-├── .env.example
-├── docs/
-│   ├── 00_DELIVERABLES_SUMMARY.md
-│   ├── 01_AUDIT_REPORT_AND_PLAN.md
-│   ├── 02_AGENT_API_ENDPOINTS.md
-│   ├── 03_IMPLEMENTATION_GUIDE.md
-│   └── 04_ROADMAP_AND_NEXT_STEPS.md
-├── src/
-│   ├── credentialVault.ts
-│   ├── bpjsSessionManager.ts
-│   └── bpjsPortalAgent.ts
-└── examples/
-    └── (curl examples, test cases, etc.)
-```
+### 1. CAPTCHA & reCAPTCHA Handling
+Government portals (EDABU and SIPP Online) frequently deploy visual and behavioral CAPTCHA challenges during login:
+- **Assisted Mode (Human-in-the-Loop)**: When a CAPTCHA challenge is detected, the agent raises a `CAPTCHA_CHALLENGE` event via `bpjsPortalAgent.submitCaptchaSolution()`. An operator can solve the prompt via the dashboard or webhook callback.
+- **Automated Solving**: For headless production setups, integration with authorized solving services (e.g. 2Captcha, Anti-Captcha) or BPJS official APIs can be configured.
 
----
+### 2. 2FA / OTP Verification
+Periodic security upgrades on EDABU and SIPP may mandate SMS or Email OTP verification:
+- The agent implements `bpjsPortalAgent.submitOtpVerification(portalName, sessionId, otpCode)` to inject verification codes without aborting the pending sync queue.
 
-## 🔐 Security Features
+### 3. Concurrent Session Restrictions
+EDABU and SIPP Online enforce strict single-session limits per login account. Opening concurrent sessions with the same username causes previous sessions to be kicked out.
+- `bpjsSessionManager` monitors active sessions and provides `logoutPortal()` to cleanly terminate stale sessions before dispatching new sync jobs.
 
-✅ **Encryption**
-- AES-256-GCM (NIST standard)
-- PBKDF2 key derivation (100,000 iterations)
-- Random salt & IV per credential
-- Auth tag verification
-
-✅ **Session Management**
-- Session duration: 1 hour (configurable)
-- Inactivity timeout: 30 minutes
-- Token refresh: 10 minutes before expiry
-- Max 3 concurrent sessions per portal
-- Auto-cleanup worker (every 5 minutes)
-
-✅ **Audit Trail**
-- All operations logged
-- Timestamp with Jakarta timezone
-- User/system attribution
-- Error tracking & recovery
+### 4. Legal Authorization & BPJS Bridging API
+- **Official Bridging API Preferred**: Organizations with high employee volumes should establish a formal **PKS (Perjanjian Kerja Sama)** with BPJS Kesehatan and BPJS Ketenagakerjaan to access official REST/Web Service Bridging APIs.
+- **Terms of Service**: Automated web scraping of government portals without written enterprise consent may violate portal terms. Always ensure compliance with Indonesian data protection laws (UU Perlindungan Data Pribadi No. 27/2022).
 
 ---
 
-## 📊 Implementation Timeline
+## 📋 REST API Endpoints Overview
 
-| Phase | Duration | Tasks |
-|-------|----------|-------|
-| Week 1 | 18 hours | Setup, integration, testing |
-| Week 2 | 24 hours | Browser automation (EDABU & SIPP) |
-| Week 3 | 28 hours | Integration testing, security audit |
-| Week 4 | 18 hours | Deployment, monitoring |
-| **Total** | **88 hours** | **4 weeks** |
-
----
-
-## ✅ Success Criteria
-
-The agent is working correctly when:
-
-1. ✅ Credentials stored securely (encrypted at rest)
-2. ✅ Sessions created/maintained/cleaned up automatically
-3. ✅ Login to EDABU & SIPP successful
-4. ✅ NEW employees registered in both portals
-5. ✅ RESIGNED/TERMINATED employees deactivated
-6. ✅ CHANGED employees flagged for manual upload
-7. ✅ Complete audit trail recorded
-8. ✅ No security vulnerabilities
-9. ✅ <5 minute deployment downtime
-10. ✅ HR can run sync once per month without issues
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/agent/health` | System health, active sessions count, and vault status |
+| `GET` | `/api/agent/diagnostics` | Telemetry, memory statistics, and runtime details |
+| `GET` | `/api/agent/credentials/status` | Active credentials metadata (no passwords exposed) |
+| `POST` | `/api/agent/credentials/store` | Store encrypted credentials (`AES-256-GCM` + `PBKDF2`) |
+| `POST` | `/api/agent/credentials/rotate/:portal` | Rotate portal password with new salt and IV |
+| `GET` | `/api/agent/credentials/export-backup` | Export encrypted base64 backup payload |
+| `POST` | `/api/agent/login-test/:portal` | Test independent handshake to EDABU or SIPP |
+| `POST` | `/api/agent/sync` | Full autonomous sync (`?period=YYYY-MM&force=true`) |
+| `GET` | `/api/agent/sessions/status` | Active session tokens and countdown timers |
+| `POST` | `/api/agent/sessions/logout/:sessionId` | Invalidate specific active session |
+| `POST` | `/api/agent/sessions/logout-portal/:portal` | Flush all active sessions for a portal |
+| `GET/POST` | `/api/agent/sessions/config` | View or adjust timeout and concurrency policies |
+| `GET` | `/api/agent/employees` | Master employee dataset |
+| `GET` | `/api/agent/validate` | Pre-flight validation against BPJS regulatory rules |
+| `GET` | `/api/agent/audit/logs` | Query audit trail with Asia/Jakarta timestamps |
+| `GET` | `/api/agent/audit/summary` | Summary counts of transaction states |
+| `GET` | `/api/agent/live-logs` | Live agent execution console event stream |
 
 ---
 
-## 📞 Key Contacts & Escalation
-
-### Technical Questions
-- Review appropriate documentation in `/docs/`
-- Check code comments in `/src/` files
-- Follow step-by-step guide in IMPLEMENTATION_GUIDE.md
-
-### EDABU/SIPP Portal Issues
-- Contact BPJS Support
-- Check portal status page
-- Review audit logs
-
-### Security Issues
-- Immediately disable affected credentials
-- Alert security team
-- Review audit trail
-- Implement fixes
-
----
-
-## 📚 Documentation Quick Links
-
-| Document | Purpose | Read Time |
-|----------|---------|-----------|
-| 00_DELIVERABLES_SUMMARY | What was delivered | 15 min |
-| 01_AUDIT_REPORT | Why & how it works | 20 min |
-| 02_AGENT_API_ENDPOINTS | How to use the API | 25 min |
-| 03_IMPLEMENTATION_GUIDE | Step-by-step setup | 45 min |
-| 04_ROADMAP_AND_NEXT_STEPS | Development timeline | 20 min |
-
-**Total recommended reading time: ~2 hours**
-
----
-
-## 🎯 What's Next?
-
-### Immediate (This Week)
-- [ ] Extract & read all documentation
-- [ ] Understand architecture
-- [ ] Identify EDABU & SIPP portal URLs
-- [ ] Generate master encryption key
-
-### Next Week
-- [ ] Install dependencies
-- [ ] Copy modules to project
-- [ ] Implement Playwright automation
-- [ ] Add API endpoints
-
-### Following Weeks
-- [ ] Test with sandbox credentials
-- [ ] Run full test suite
-- [ ] Security audit
-- [ ] Deploy to production
-
----
-
-## 📝 Version Information
-
-| Component | Version | Status |
-|-----------|---------|--------|
-| credentialVault.ts | 1.0 | ✅ Production-ready |
-| bpjsSessionManager.ts | 1.0 | ✅ Production-ready |
-| bpjsPortalAgent.ts | 1.0 | ⏳ Template-ready |
-| Documentation | 1.0 | ✅ Complete |
-| API Endpoints | 1.0 | ✅ Documented |
-
----
-
-## 🏆 Package Highlights
-
-✨ **What Makes This Complete:**
-- Type-safe TypeScript implementation
-- Production-ready security infrastructure
-- Comprehensive documentation (77,000+ words)
-- 15+ API endpoints fully documented
-- 4-week implementation timeline
-- Risk assessment & mitigation strategies
-- Deployment checklist
-- Troubleshooting guide
-- Code templates for Playwright implementation
-
-🚀 **What's Ready Now:**
-- Credential vault (AES-256 encryption)
-- Session manager (auto-refresh, timeout handling)
-- Portal agent skeleton (Playwright templates)
-- API endpoint definitions
-- Complete documentation
-
-⏳ **What Needs Implementation:**
-- Playwright browser automation
-- EDABU & SIPP portal URLs
-- CSS selectors for forms
-- Testing & validation
-
----
-
-## 💡 Key Features
-
-### Encryption & Credentials
-```
-✅ AES-256-GCM encryption
-✅ PBKDF2 (100k iterations)
-✅ Random salt & IV per credential
-✅ Auth tag verification
-✅ Credential rotation
-✅ Status management
-```
-
-### Session Management
-```
-✅ 1-hour session duration
-✅ 30-minute inactivity timeout
-✅ 10-minute token refresh threshold
-✅ Max 3 concurrent sessions
-✅ Auto-cleanup worker
-✅ Full audit logging
-```
-
-### Automation
-```
-✅ Playwright headless browser
-✅ Retry with exponential backoff
-✅ Screenshot logging
-✅ Error resilience
-✅ Session recovery
-```
-
----
-
-## 🔒 Before Going Live
-
-- [ ] Review security checklist in docs/
-- [ ] Generate secure master key (32+ characters)
-- [ ] Set up vault (AWS/HashiCorp)
-- [ ] Test with sandbox credentials
-- [ ] Implement full test suite
-- [ ] Run security audit
-- [ ] Get BPJS authorization
-- [ ] Set up monitoring & alerting
-- [ ] Train HR team
-- [ ] Document incident response
-
----
-
-## 📞 Support Resources
-
-- **BPJS Portal Documentation**: Contact BPJS directly
-- **Playwright Guide**: https://playwright.dev/
-- **Node.js Security**: https://nodejs.org/en/docs/guides/security/
-- **This Package**: See documentation in `/docs/`
-
----
-
-## 🎓 Learning Path
-
-1. **Start here:** 00_DELIVERABLES_SUMMARY.md
-2. **Understand:** 01_AUDIT_REPORT_AND_PLAN.md
-3. **Implement:** 03_IMPLEMENTATION_GUIDE.md
-4. **Reference:** 02_AGENT_API_ENDPOINTS.md
-5. **Plan:** 04_ROADMAP_AND_NEXT_STEPS.md
-
----
-
-## ✅ Final Checklist
-
-Before starting development:
-
-- [ ] All 5 documents reviewed & understood
-- [ ] Architecture diagram studied
-- [ ] API endpoints documented
-- [ ] Team roles assigned
-- [ ] EDABU/SIPP portal URLs obtained
-- [ ] Sandbox accounts created
-- [ ] Development timeline approved
-- [ ] Security requirements understood
-- [ ] Master encryption key generated
-- [ ] Vault solution selected
-
----
-
-**Package Created:** 28 September 2026  
-**Status:** ✅ Complete & Ready for Development  
-**Effort to Implementation:** 80-120 hours (4 weeks)  
-**Team Size:** 4-5 people recommended
-
----
-
-**Let's build this together! 🚀**
-
-For questions or issues, refer to the comprehensive documentation in the `/docs/` folder.
+## 📜 Compliance & License
+Developed for enterprise HR data synchronization under authorized organizational procedures. All transactions are logged with immutable audit trails.

@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import { auditSnapshotStore, formatJakartaDate } from './auditSnapshot.ts';
 
 /**
@@ -6,9 +8,10 @@ import { auditSnapshotStore, formatJakartaDate } from './auditSnapshot.ts';
  * 
  * Security Features:
  * - AES-256 encryption at rest
- * - PBKDF2 key derivation
+ * - PBKDF2 key derivation (100,000 rounds)
+ * - Persistent master key resolution (Env / Secrets Manager / Protected Keyfile)
  * - Credentials never logged in plaintext
- * - Encrypted backup capability
+ * - Encrypted disk persistence across server restarts
  * - Audit trail for all access
  */
 
@@ -39,29 +42,54 @@ class CredentialVault {
   private readonly SALT_LENGTH = 16;
   private readonly IV_LENGTH = 12;
   private readonly AUTH_TAG_LENGTH = 16;
+  private readonly VAULT_DATA_PATH = './logs/data/vault.enc.json';
+  private readonly KEY_FILE_PATH = './.vault_master_key';
 
   constructor() {
-    // In production: load from Vault / AWS Secrets Manager
-    // For now: derive from CREDENTIAL_MASTER_KEY env var
-    this.encryptionKey = process.env.CREDENTIAL_MASTER_KEY || this.generateMasterKey();
-    
-    // Initialize from persisted storage (if available)
+    this.encryptionKey = this.resolveMasterKey();
     this.loadFromStorage();
   }
 
   /**
-   * Generate secure master key (fallback only)
-   * PRODUCTION: Must use external vault!
+   * Securely resolve master key:
+   * 1. Environment variable (e.g. injected from AWS Secrets Manager / Vault / GCP)
+   * 2. Protected local keyfile (.vault_master_key, chmod 600, excluded by .gitignore)
+   * 3. Fallback: generate and persist locally to ensure data decryptability across restarts.
    */
-  private generateMasterKey(): string {
+  private resolveMasterKey(): string {
     const envKey = process.env.CREDENTIAL_MASTER_KEY;
-    if (!envKey) {
-      console.warn(
-        '⚠️ WARNING: CREDENTIAL_MASTER_KEY not set. Using temporary key (NOT SAFE FOR PRODUCTION)'
-      );
-      return crypto.randomBytes(32).toString('hex');
+    if (envKey && envKey.trim().length >= 32) {
+      return envKey.trim();
     }
-    return envKey;
+
+    // Try reading local protected keyfile
+    try {
+      if (fs.existsSync(this.KEY_FILE_PATH)) {
+        const storedKey = fs.readFileSync(this.KEY_FILE_PATH, 'utf-8').trim();
+        if (storedKey.length >= 32) {
+          process.env.CREDENTIAL_MASTER_KEY = storedKey;
+          return storedKey;
+        }
+      }
+    } catch (err: any) {
+      console.warn('[CredentialVault] Warning reading local master key file:', err.message);
+    }
+
+    // Generate persistent key and write to protected file
+    const newKey = crypto.randomBytes(this.KEY_LENGTH).toString('hex');
+    try {
+      fs.writeFileSync(this.KEY_FILE_PATH, newKey, { mode: 0o600, encoding: 'utf-8' });
+      process.env.CREDENTIAL_MASTER_KEY = newKey;
+      console.log('🔒 Initialized persistent vault master key in protected file (never logged in plaintext).');
+    } catch {
+      console.warn('⚠️ Could not write to .vault_master_key. Using in-memory master key for this session.');
+    }
+
+    return newKey;
+  }
+
+  public isPersistentKeyConfigured(): boolean {
+    return Boolean(process.env.CREDENTIAL_MASTER_KEY || fs.existsSync(this.KEY_FILE_PATH));
   }
 
   /**
@@ -116,6 +144,7 @@ class CredentialVault {
       };
 
       this.credentials.set(portalName, record);
+      this.saveToStorage();
 
       // Audit log
       auditSnapshotStore.addAuditLog({
@@ -265,6 +294,7 @@ class CredentialVault {
       record.salt = salt.toString('hex');
       record.iv = iv.toString('hex');
       record.lastRotatedAt = formatJakartaDate();
+      this.saveToStorage();
 
       auditSnapshotStore.addAuditLog({
         nik: 'SYSTEM',
@@ -322,6 +352,7 @@ class CredentialVault {
     }
 
     record.status = 'DISABLED';
+    this.saveToStorage();
 
     auditSnapshotStore.addAuditLog({
       nik: 'SYSTEM',
@@ -339,17 +370,39 @@ class CredentialVault {
   }
 
   /**
-   * Load credentials from persistent storage (if implemented)
+   * Save encrypted credentials to persistent file
+   */
+  private saveToStorage(): void {
+    try {
+      const dir = path.dirname(this.VAULT_DATA_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const data = Array.from(this.credentials.entries());
+      fs.writeFileSync(this.VAULT_DATA_PATH, JSON.stringify(data, null, 2), { mode: 0o600, encoding: 'utf-8' });
+    } catch (err: any) {
+      console.error('[CredentialVault] Failed to persist credentials to storage:', err.message);
+    }
+  }
+
+  /**
+   * Load credentials from persistent storage
    */
   private loadFromStorage(): void {
-    // TODO: Implement persistence layer
-    // Options:
-    // 1. Redis (distributed)
-    // 2. PostgreSQL with encrypted column
-    // 3. File system with restricted permissions
-    // 4. AWS Secrets Manager / Vault
-    
-    console.log('[CredentialVault] Initialized (in-memory storage)');
+    try {
+      if (fs.existsSync(this.VAULT_DATA_PATH)) {
+        const raw = fs.readFileSync(this.VAULT_DATA_PATH, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          this.credentials = new Map(parsed);
+          console.log(`[CredentialVault] Loaded ${this.credentials.size} stored credential record(s) from persistent disk storage.`);
+          return;
+        }
+      }
+    } catch (err: any) {
+      console.warn('[CredentialVault] Could not load persisted vault records:', err.message);
+    }
+    console.log('[CredentialVault] Initialized with empty storage.');
   }
 
   /**

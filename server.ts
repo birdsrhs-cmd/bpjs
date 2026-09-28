@@ -6,12 +6,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Ensure master key
-if (!process.env.CREDENTIAL_MASTER_KEY) {
-  process.env.CREDENTIAL_MASTER_KEY = crypto.randomBytes(32).toString('hex');
-  console.log('🔑 Generated in-memory CREDENTIAL_MASTER_KEY for this session.');
-}
-
 import { credentialVault } from './src/credentialVault.ts';
 import { bpjsSessionManager } from './src/bpjsSessionManager.ts';
 import { bpjsPortalAgent } from './src/bpjsPortalAgent.ts';

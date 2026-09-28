@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+dotenv.config();
 dotenv.config({ path: '.env.local' });
 
 import { credentialVault } from './src/credentialVault.ts';
@@ -7,14 +8,13 @@ import { bpjsPortalAgent } from './src/bpjsPortalAgent.ts';
 import { auditSnapshotStore } from './src/auditSnapshot.ts';
 
 async function main() {
-  console.log('=== BPJS Autonomous Agent Test ===\n');
+  console.log('=== BPJS Autonomous Agent CLI Runner ===\n');
 
-  // Generate master key if not set
-  if (!process.env.CREDENTIAL_MASTER_KEY) {
-    const crypto = await import('crypto');
-    process.env.CREDENTIAL_MASTER_KEY = crypto.randomBytes(32).toString('hex');
-    console.log('⚠️  Generated temporary master key (NOT for production)');
-    console.log(`   ${process.env.CREDENTIAL_MASTER_KEY}\n`);
+  // Verify vault master key
+  if (credentialVault.isPersistentKeyConfigured()) {
+    console.log('🔒 Credential Vault: Master key configured & persistent.');
+  } else {
+    console.log('⚠️  Credential Vault: Master key running in temporary dev fallback mode.');
   }
 
   // Store credentials from env
@@ -68,6 +68,11 @@ async function main() {
   console.log('Audit status:', JSON.stringify(summary, null, 2));
 
   console.log('\n=== Test Complete ===');
+  bpjsSessionManager.shutdown();
+  process.exit(0);
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
